@@ -5,4 +5,4 @@
 TalkDe
 ## 下载
 *注：仅支持Microsoft Windows各版本64位系统*
-[windows x64](./tetris.exe)
+[下载 windows x64](https://github.com/TalkDeBPD/TalkDe-Tetris/raw/main/bin/Tetris.exe)
