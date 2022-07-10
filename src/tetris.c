@@ -101,7 +101,7 @@ LRESULT __stdcall WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		case WM_CREATE:
 		srand((unsigned int)time(NULL)); // 初始化随机数生成器
-		nextBlock = (rand() / 93) % 9; // 初始化第一个方块
+		nextBlock = (rand() / 93) % 8; // 初始化第一个方块
 		setNextBlock(nextBlock);
 		whitePen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
 		blackPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
@@ -322,7 +322,7 @@ void rePaint(HWND hwnd)
 void newBlock()
 {
 	int thisBlock = nextBlock;
-	nextBlock = (rand() / 93) % 9;
+	nextBlock = (rand() / 93) % 8;
 	if (nextBlock == thisBlock) // 如果重复就重算
 	{
 		nextBlock = (rand() / 93) % 9;
@@ -364,7 +364,6 @@ void newBlock()
 		break;
 		
 	case 3:
-	case 4:
 		blockPos[0][0] = -2;
 		blockPos[0][1] = 4;
 		blockPos[1][0] = -1;
@@ -375,7 +374,7 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-	case 5:
+	case 4:
 		blockPos[0][0] = -2;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -2;
@@ -386,7 +385,7 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-	case 6:
+	case 5:
 		blockPos[0][0] = -1;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -2;
@@ -397,8 +396,8 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
+	case 6:
 	case 7:
-	case 8:
 		blockPos[0][0] = -1;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -2;
@@ -444,7 +443,6 @@ void setNextBlock(int nextBlock)
 		break;
 
 	case 3:
-	case 4:
 		nextBlockShow[0] = TRUE;
 		nextBlockShow[1] = TRUE;
 		nextBlockShow[2] = FALSE;
@@ -453,7 +451,7 @@ void setNextBlock(int nextBlock)
 		nextBlockShow[5] = FALSE;
 		break;
 
-	case 5:
+	case 4:
 		nextBlockShow[0] = TRUE;
 		nextBlockShow[1] = TRUE;
 		nextBlockShow[2] = FALSE;
@@ -462,7 +460,7 @@ void setNextBlock(int nextBlock)
 		nextBlockShow[5] = TRUE;
 		break;
 
-	case 6:
+	case 5:
 		nextBlockShow[0] = TRUE;
 		nextBlockShow[1] = TRUE;
 		nextBlockShow[2] = TRUE;
@@ -471,8 +469,8 @@ void setNextBlock(int nextBlock)
 		nextBlockShow[5] = FALSE;
 		break;
 
+	case 6:
 	case 7:
-	case 8:
 		nextBlockShow[0] = TRUE;
 		nextBlockShow[1] = FALSE;
 		nextBlockShow[2] = TRUE;
