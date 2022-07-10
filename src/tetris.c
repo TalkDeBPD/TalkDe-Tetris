@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "resource.h"
+#pragma warning(disable : 6386)
 #define SPEED 1100
 #define TIMER_ID 73
 
@@ -14,8 +15,10 @@
 const char title[] = "俄罗斯方块";
 BOOL blocks[20][10];
 int blockPos[4][2];
+BOOL nextBlockShow[6];
 int score;
 int maxScore;
+int nextBlock; // 下一个方块的号码
 HPEN whitePen, blackPen;
 HBRUSH whiteBrush, grayBrush;
 HFONT font;
@@ -25,6 +28,7 @@ LRESULT __stdcall WndProc(HWND, UINT, WPARAM, LPARAM); // 窗口响应
 void paint(HWND); // 绘制（BeginPaint()）
 void rePaint(HWND); // 绘制（GetDC()）
 void newBlock(); // 新增方块
+void setNextBlock(int); // 设置nextBlockShow
 void move(HWND); // 移动并消行
 int saveScore(int); // 获取并保存最高记录
 void toLeft(); // 左移
@@ -97,6 +101,8 @@ LRESULT __stdcall WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		case WM_CREATE:
 		srand((unsigned int)time(NULL)); // 初始化随机数生成器
+		nextBlock = (rand() / 93) % 9; // 初始化第一个方块
+		setNextBlock(nextBlock);
 		whitePen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
 		blackPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
 		whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
@@ -136,21 +142,25 @@ LRESULT __stdcall WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 			case 'A':
+			case VK_LEFT:
 			toLeft();
 			rePaint(hwnd);
 			break;
 			
 			case 'D':
+			case VK_RIGHT:
 			toRight();
 			rePaint(hwnd);
 			break;
 			
 			case 'W':
+			case VK_UP:
 			toReSet();
 			rePaint(hwnd);
 			break;
 			
 			case 'S':
+			case VK_DOWN:
 			move(hwnd);
 			rePaint(hwnd);
 			break;
@@ -202,22 +212,50 @@ void paint(HWND hwnd)
 			Rectangle(hdc, 5 + 25 * j, 5 + 25 * i, 25 * (j + 1), 25 * (i + 1)); // 绘制方块
 		}
 	}
+
 	char b[16];
-	TextOut(hdc, 260, 30, "分数", strlen("分数"));
+	TextOut(hdc, 260, 30, "分数", (int)strlen("分数"));
 	sprintf_s(b, 16, "%06d", score);
 	TextOut(hdc, 260, 30 + tm.tmHeight, b, 6);
-	TextOut(hdc, 260, 30 + 2 * tm.tmHeight, "最高分", strlen("最高分"));
+	TextOut(hdc, 260, 30 + 2 * tm.tmHeight, "最高分", (int)strlen("最高分"));
 	sprintf_s(b, 16, "%06d", maxScore);
 	TextOut(hdc, 260, 30 + 3 * tm.tmHeight, b, 6); // 绘制文字信息
-	TextOut(hdc, 260, 30 + 5 * tm.tmHeight, "TalkDe出品，", strlen("TalkDe出品，"));
-	TextOut(hdc, 260, 30 + 6 * tm.tmHeight, "必属精品。", strlen("必属精品。"));
-	TextOut(hdc, 260, 30 + 8 * tm.tmHeight, "初稿完成时间：", strlen("初稿完成时间："));
-	TextOut(hdc, 260, 30 + 9 * tm.tmHeight, "2021-07-21", strlen("2021-07-21"));
-	TextOut(hdc, 260, 30 + 11 * tm.tmHeight, "使用方法：", strlen("使用方法"));
-	TextOut(hdc, 260, 30 + 12 * tm.tmHeight, "用“WASD”四键控制，", strlen("用“WASD”四键控制，"));
-	TextOut(hdc, 260, 30 + 13 * tm.tmHeight, "需要再英文输入模式下", strlen("需要再英文输入模式下"));
-	TextOut(hdc, 260, 30 + 14 * tm.tmHeight, "控制。", strlen("控制。"));
-	
+	TextOut(hdc, 260, 30 + 5 * tm.tmHeight, "TalkDe出品，", (int)strlen("TalkDe出品，"));
+	TextOut(hdc, 260, 30 + 6 * tm.tmHeight, "必属精品。", (int)strlen("必属精品。"));
+	TextOut(hdc, 260, 30 + 8 * tm.tmHeight, "初稿完成时间：", (int)strlen("初稿完成时间："));
+	TextOut(hdc, 260, 30 + 9 * tm.tmHeight, "2021-07-21", (int)strlen("2021-07-21"));
+	TextOut(hdc, 260, 30 + 11 * tm.tmHeight, "使用方法：", (int)strlen("使用方法"));
+	TextOut(hdc, 260, 30 + 12 * tm.tmHeight, "用“WASD”四键控制，", (int)strlen("用“WASD”四键控制，"));
+	TextOut(hdc, 260, 30 + 13 * tm.tmHeight, "需要再英文输入模式下", (int)strlen("需要再英文输入模式下"));
+	TextOut(hdc, 260, 30 + 14 * tm.tmHeight, "控制；当然，也可以使", (int)strlen("控制。当然，也可以使"));
+	TextOut(hdc, 260, 30 + 15 * tm.tmHeight, "用方向键控制。", (int)strlen("用方向键控制。"));
+
+	// 绘制下一个方块
+	for (int i = 0; i < 2; ++i)
+	{
+		if (nextBlockShow[i])
+		{
+			SelectObject(hdc, grayBrush);
+		}
+		else
+		{
+			SelectObject(hdc, whiteBrush);
+		}
+		Rectangle(hdc, 285 + 25 * i, 305, 305 + 25 * i, 325); // 绘制方块
+	}
+	for (int i = 0; i < 4; ++i)
+	{
+		if (nextBlockShow[i + 2])
+		{
+			SelectObject(hdc, grayBrush);
+		}
+		else
+		{
+			SelectObject(hdc, whiteBrush);
+		}
+		Rectangle(hdc, 260 + 25 * i, 330, 280 + 25 * i, 350); // 绘制方块
+	}
+
 	EndPaint(hwnd, &ps);
 }
 
@@ -251,16 +289,48 @@ void rePaint(HWND hwnd)
 	TextOut(hdc, 260, 30 + tm.tmHeight, b, 6);
 	sprintf_s(b, 16, "%06d", maxScore);
 	TextOut(hdc, 260, 30 + 3 * tm.tmHeight, b, 6);
+
+	// 绘制下一个方块
+	for (int i = 0; i < 2; ++i)
+	{
+		if (nextBlockShow[i])
+		{
+			SelectObject(hdc, grayBrush);
+		}
+		else
+		{
+			SelectObject(hdc, whiteBrush);
+		}
+		Rectangle(hdc, 285 + 25 * i, 305, 305 + 25 * i, 325); // 绘制方块
+	}
+	for (int i = 0; i < 4; ++i)
+	{
+		if (nextBlockShow[i + 2])
+		{
+			SelectObject(hdc, grayBrush);
+		}
+		else
+		{
+			SelectObject(hdc, whiteBrush);
+		}
+		Rectangle(hdc, 260 + 25 * i, 330, 280 + 25 * i, 350); // 绘制方块
+	}
 	
 	ReleaseDC(hwnd, hdc);
 }
 
 void newBlock()
 {
-	int val = (rand() / 93) % 9;
-	switch (val)
+	int thisBlock = nextBlock;
+	nextBlock = (rand() / 93) % 9;
+	if (nextBlock == thisBlock) // 如果重复就重算
 	{
-		case 0:
+		nextBlock = (rand() / 93) % 9;
+	}
+
+	switch (thisBlock)
+	{
+	case 0:
 		blockPos[0][0] = -1;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -1;
@@ -271,7 +341,7 @@ void newBlock()
 		blockPos[3][1] = 6;
 		break;
 		
-		case 1:
+	case 1:
 		blockPos[0][0] = -2;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -1;
@@ -282,7 +352,7 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-		case 2:
+	case 2:
 		blockPos[0][0] = -1;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -1;
@@ -293,8 +363,8 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-		case 3:
-		case 4:
+	case 3:
+	case 4:
 		blockPos[0][0] = -2;
 		blockPos[0][1] = 4;
 		blockPos[1][0] = -1;
@@ -305,7 +375,7 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-		case 5:
+	case 5:
 		blockPos[0][0] = -2;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -2;
@@ -316,7 +386,7 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-		case 6:
+	case 6:
 		blockPos[0][0] = -1;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -2;
@@ -327,8 +397,8 @@ void newBlock()
 		blockPos[3][1] = 5;
 		break;
 		
-		case 7:
-		case 8:
+	case 7:
+	case 8:
 		blockPos[0][0] = -1;
 		blockPos[0][1] = 3;
 		blockPos[1][0] = -2;
@@ -337,6 +407,78 @@ void newBlock()
 		blockPos[2][1] = 4;
 		blockPos[3][0] = -1;
 		blockPos[3][1] = 5;
+	}
+
+	setNextBlock(nextBlock);
+}
+
+void setNextBlock(int nextBlock)
+{
+	switch (nextBlock)
+	{
+	case 0:
+		nextBlockShow[0] = FALSE;
+		nextBlockShow[1] = FALSE;
+		nextBlockShow[2] = TRUE;
+		nextBlockShow[3] = TRUE;
+		nextBlockShow[4] = TRUE;
+		nextBlockShow[5] = TRUE;
+		break;
+
+	case 1:
+		nextBlockShow[0] = TRUE;
+		nextBlockShow[1] = FALSE;
+		nextBlockShow[2] = FALSE;
+		nextBlockShow[3] = TRUE;
+		nextBlockShow[4] = TRUE;
+		nextBlockShow[5] = TRUE;
+		break;
+
+	case 2:
+		nextBlockShow[0] = FALSE;
+		nextBlockShow[1] = TRUE;
+		nextBlockShow[2] = TRUE;
+		nextBlockShow[3] = TRUE;
+		nextBlockShow[4] = TRUE;
+		nextBlockShow[5] = FALSE;
+		break;
+
+	case 3:
+	case 4:
+		nextBlockShow[0] = TRUE;
+		nextBlockShow[1] = TRUE;
+		nextBlockShow[2] = FALSE;
+		nextBlockShow[3] = TRUE;
+		nextBlockShow[4] = TRUE;
+		nextBlockShow[5] = FALSE;
+		break;
+
+	case 5:
+		nextBlockShow[0] = TRUE;
+		nextBlockShow[1] = TRUE;
+		nextBlockShow[2] = FALSE;
+		nextBlockShow[3] = FALSE;
+		nextBlockShow[4] = TRUE;
+		nextBlockShow[5] = TRUE;
+		break;
+
+	case 6:
+		nextBlockShow[0] = TRUE;
+		nextBlockShow[1] = TRUE;
+		nextBlockShow[2] = TRUE;
+		nextBlockShow[3] = TRUE;
+		nextBlockShow[4] = FALSE;
+		nextBlockShow[5] = FALSE;
+		break;
+
+	case 7:
+	case 8:
+		nextBlockShow[0] = TRUE;
+		nextBlockShow[1] = FALSE;
+		nextBlockShow[2] = TRUE;
+		nextBlockShow[3] = TRUE;
+		nextBlockShow[4] = TRUE;
+		nextBlockShow[5] = FALSE;
 	}
 }
 
@@ -450,16 +592,16 @@ void move(HWND hwnd)
 				}
 			}
 			score += lines * lines * lines; // 累计分数
-			SetTimer(hwnd, TIMER_ID, (UINT)(SPEED / (score / 200.0 + 1)), NULL);
+			SetTimer(hwnd, TIMER_ID, (UINT)(SPEED / (score / 120.0 + 1)), NULL); // 修改速度
 			BOOL flag3 = FALSE;
-			for (int i = 0; i < 10; ++i)
+			for (int i = 0; i < 10; ++i) // 检测游戏是否结束
 			{
 				if (blocks[0][i])
 				{
 					flag3 = TRUE;
 					break;
 				}
-			} // 检测游戏是否结束
+			}
 			if (flag3) // 游戏结束
 			{
 				KillTimer(hwnd, TIMER_ID);
@@ -635,7 +777,7 @@ void toReSet()
 {
 	for (int i = 0; i < 4; ++i)
 	{
-		if (blockPos[i][0] < 0)
+		if (blockPos[i][0] < 0) // 如果没有完全露出，那么不重置
 		{
 			return;
 		}
@@ -643,13 +785,13 @@ void toReSet()
 	BOOL b1[4][4], b2[4][4];
 	int rightUp[2] = { 20, -1 }, leftUp[2] = { 20, 20 };
 	int pos[4][2];
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < 4; ++i) // 清空b1 b2
 	{
 		for (int j = 0; j < 4; ++j)
 		{
 			b1[i][j] = b2[i][j] = FALSE;
 		}
-	} // 清空b1 b2
+	}
 	for (int i = 0; i < 4; ++i)
 	{
 		if (rightUp[0] > blockPos[i][0])
